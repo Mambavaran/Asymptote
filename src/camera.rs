@@ -2,6 +2,13 @@ use cgmath::*;
 use iced_winit::winit::event::*;
 use std::time::Duration;
 
+#[rustfmt::skip]
+pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.0,
+    0.0, 0.0, 0.5, 1.0,
+);
 pub struct Camera {
     pub eye: cgmath::Point3<f32>,
     pub target: cgmath::Point3<f32>,
@@ -17,7 +24,7 @@ impl Camera {
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         let proj = cgmath::ortho(-self.aspect*self.fovy, self.aspect*self.fovy,-1.0*self.fovy ,1.0*self.fovy ,self.znear, self.zfar);
-        proj * view
+        return OPENGL_TO_WGPU_MATRIX * proj * view
     }
 }
 
@@ -28,6 +35,8 @@ pub struct Uniform {
     _padding:u32,
 }
 
+
+
 impl Uniform {
     pub fn new() -> Self {
         Self {
@@ -35,12 +44,14 @@ impl Uniform {
             _padding: 0,
         }
     }
-
+    //update texture offset
+    /* 
     pub fn update(&mut self,loc_x:f32,loc_y:f32){
 
         self.offset = cgmath::Vector3::new(loc_x,loc_y,0.0).into();
 
     }
+    */
 }
 
 #[repr(C)]
@@ -305,6 +316,7 @@ impl CameraController {
             }
         }
 
+        //pixel glitch fix
         camera.target = camera.position + (self.x_current - self.x_current%1.0) * left + (self.y_current - self.y_current%3.0) * forward;
 
         camera.eye = cgmath::Point3::new(self.pos_x,self.pos_y,self.pos_z)+(

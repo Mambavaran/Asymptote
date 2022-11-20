@@ -18,16 +18,19 @@ pub struct Controls {
     pub text: String,
     pub fps: i32,
     pub last_render_time: Instant,
-    pub text_column:Vec<TextColumn>,
+    pub text_column: Vec<TextColumn>,
+    pub parse_flag: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     TextChanged(String),
-    OnSubmit,
-    FrameUpdate(i32),
-    Update,
     ServerLog(String),
+    FrameUpdate(i32),
+    OnSubmit,
+    Update,
+    CommandParsed,
+    ChatMessage,
 }
 
 impl Controls {
@@ -37,6 +40,7 @@ impl Controls {
             fps: 0,
             last_render_time: Instant::now(),
             text_column: Default::default(),
+            parse_flag: false,
         }
     }
 }
@@ -55,13 +59,11 @@ impl Program for Controls {
             }
             
             Message::OnSubmit => {
-
-                self.text_column.push(TextColumn::new(("Mambavaran: ".to_owned() + &self.text).to_string()));
-                self.text = String::from("");
-                
+                self.parse_flag = true;
             }
             
-            Message::FrameUpdate(fps) =>{
+            
+            Message::FrameUpdate(fps) => {
                 self.fps = fps;
                 for x in self.text_column.iter_mut() {
                     x.timer -= 1.0;
@@ -82,6 +84,14 @@ impl Program for Controls {
             Message::ServerLog(text) => {
                 self.text_column.push(TextColumn::new(text));
             }
+            Message::CommandParsed => {
+                self.text = String::from("");
+                self.parse_flag = false;
+            }
+            Message::ChatMessage =>{
+                self.text_column.push(TextColumn::new(("Admin: ".to_owned() + &self.text).to_string()));
+            }
+
         }
 
         Command::none()
@@ -102,7 +112,7 @@ impl Program for Controls {
             self.text_column
                 .iter()
                 .map(|event| Text::new(format!("{}", event.text))
-                .style(Color::new(0.0,1.0,0.0,event.alpha))
+                .style(Color::new(1.0,1.0,1.0,event.alpha))
                 .size(20))
                 .map(Element::from)
                 .collect(),
@@ -117,7 +127,7 @@ impl Program for Controls {
             .push(cli)
             .push(
                 Text::new("FPS: ".to_owned() + &self.fps.to_string())
-                    .style(Color::new(0.0,1.0,0.0,1.0)).size(20),
+                    .style(Color::from_rgb(1.0,1.0,1.0)).size(20),
             )
             .push(text_columns)
             .into()
